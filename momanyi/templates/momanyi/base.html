@@ -1,0 +1,83 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}RFMS | Forest Resource Monitoring System{% endblock %}</title>
+    <meta name="description" content="Register trees, track their growth, and see the carbon and oxygen they provide.">
+    <link rel="stylesheet" href="{% static 'momanyi/css/rfms.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="topbar">
+        <button class="nav-toggle" id="nav-toggle" type="button" aria-controls="sidebar" aria-expanded="false">Menu</button>
+        <a class="brand" href="{% url 'index' %}">
+            <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+                <circle cx="16" cy="16" r="15" fill="#166534"/>
+                <path d="M16 6c-4 3-6 6-6 9 0 2 1 4 3 5v5h6v-5c2-1 3-3 3-5 0-3-2-6-6-9z" fill="#86efac"/>
+            </svg>
+            <span>RFMS<small>Forest Resource Monitoring</small></span>
+        </a>
+        <span class="topbar-spacer"></span>
+        <div class="user-box">
+            {% if user.is_authenticated %}
+                <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+                {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="link-button">Log out</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}">Log in</a>
+                <a href="{% url 'signup' %}">Sign up</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="shell">
+        {% with current=request.resolver_match.url_name %}
+        <nav class="sidebar" id="sidebar" aria-label="Main">
+            <h4>Monitoring</h4>
+            <a href="{% url 'index' %}" {% if current == 'index' %}class="active" aria-current="page"{% endif %}>Home</a>
+            <a href="{% url 'dashboard' %}" {% if current == 'dashboard' %}class="active" aria-current="page"{% endif %}>Dashboard</a>
+            <a href="{% url 'tree_registration' %}" {% if current == 'tree_registration' %}class="active" aria-current="page"{% endif %}>Register a tree</a>
+            <a href="{% url 'forest_map' %}" {% if current == 'forest_map' %}class="active" aria-current="page"{% endif %}>Forest map</a>
+
+            <h4>Impact</h4>
+            <a href="{% url 'carbon_score' %}" {% if current == 'carbon_score' %}class="active" aria-current="page"{% endif %}>Carbon score</a>
+            <a href="{% url 'oxygen_index' %}" {% if current == 'oxygen_index' %}class="active" aria-current="page"{% endif %}>Oxygen index</a>
+            <a href="{% url 'rankings' %}" {% if current == 'rankings' %}class="active" aria-current="page"{% endif %}>Rankings</a>
+
+            <h4>About</h4>
+            <a href="{% url 'methodology' %}" {% if current == 'methodology' %}class="active" aria-current="page"{% endif %}>Methodology</a>
+            <a href="{% url 'about' %}" {% if current == 'about' %}class="active" aria-current="page"{% endif %}>About RFMS</a>
+            {% if user.is_staff %}
+            <h4>Staff</h4>
+            <a href="{% url 'export_trees_csv' %}">Export trees (CSV)</a>
+            {% endif %}
+        </nav>
+        {% endwith %}
+
+        <main class="content" id="main">
+            {% if messages %}
+            <ul class="messages" role="status">
+                {% for message in messages %}
+                <li class="alert alert-{{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <footer class="site-footer">
+        RFMS &copy; {% now "Y" %} &middot; Forest Resource Monitoring System &middot;
+        <a href="{% url 'methodology' %}">How we calculate</a>
+    </footer>
+
+    <script src="{% static 'momanyi/js/site.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

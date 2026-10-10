@@ -1,0 +1,24 @@
+<form method="get" class="filters" role="search" aria-label="Filter trees">
+    <input type="search" name="q" value="{{ filters.q }}" placeholder="Search tree, species, person, county" aria-label="Search">
+    <select name="species" aria-label="Species">
+        <option value="">All species</option>
+        {% for name in species_options %}
+        <option value="{{ name }}" {% if filters.species == name %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+    </select>
+    <select name="method" aria-label="Method">
+        <option value="">Any method</option>
+        <option value="measured" {% if filters.method == 'measured' %}selected{% endif %}>Measured</option>
+        <option value="modelled" {% if filters.method == 'modelled' %}selected{% endif %}>Modelled</option>
+        <option value="needs" {% if filters.method == 'needs' %}selected{% endif %}>Needs measurement</option>
+    </select>
+    <select name="verification" aria-label="Review status">
+        <option value="">Any review status</option>
+        <option value="verified" {% if filters.verification == 'verified' %}selected{% endif %}>Verified</option>
+        <option value="pending" {% if filters.verification == 'pending' %}selected{% endif %}>Pending</option>
+    </select>
+    <button type="submit" class="btn btn-secondary btn-sm">Apply</button>
+    {% if filters.q or filters.species or filters.method or filters.verification %}
+    <a class="btn btn-secondary btn-sm" href="?">Clear</a>
+    {% endif %}
+</form>

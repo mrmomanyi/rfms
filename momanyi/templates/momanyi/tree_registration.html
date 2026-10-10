@@ -1,0 +1,228 @@
+{% extends 'momanyi/base.html' %}
+{% load static %}
+{% block title %}Register a tree | RFMS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Register a tree</h1>
+        <p>Register only newly planted trees or existing trees that are still alive. Each tree must be at least 1 metre from any other registered tree.</p>
+    </div>
+</div>
+
+<form method="post" action="{% url 'tree_registration' %}" id="tree-registration-form" novalidate
+      data-check-url="{% url 'check_coordinate_availability' %}"
+      data-subcounties-url="{% url 'get_subcounties' %}">
+    {% csrf_token %}
+    <input type="hidden" id="coords-validated" value="false">
+
+    <div class="card">
+        <h2>1. Where is the tree?</h2>
+        <div class="form-grid">
+            <div class="field">
+                <label for="county">County *</label>
+                <select id="county" name="county" required>
+                    <option value="">Select county</option>
+                    {% for c in counties %}
+                    <option value="{{ c.pk }}" {% if posted.county == c.pk|stringformat:"d" %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label for="subcounty">Sub-county *</label>
+                <select id="subcounty" name="subcounty" required disabled data-selected="{{ posted.subcounty }}">
+                    <option value="">Select Sub-County</option>
+                </select>
+            </div>
+        </div>
+        <div class="field">
+            <label for="plot-name">Field or plot name *</label>
+            <input type="text" id="plot-name" name="plot_name" maxlength="200" required
+                   placeholder="e.g. Mau Block A" value="{{ posted.plot_name }}">
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>2. About the tree</h2>
+        <div class="form-grid">
+            <div class="field">
+                <label for="species">Tree species *</label>
+                <select id="species" name="species" required>
+                    <option value="">Select species</option>
+                    {% for sp in species %}
+                    <option value="{{ sp.pk }}" {% if posted.species == sp.pk|stringformat:"d" %}selected{% endif %}>{{ sp.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label for="forest-category">Forest category *</label>
+                <select id="forest-category" name="forest_category" required>
+                    <option value="">Select category</option>
+                    <option value="afforestation" {% if posted.forest_category == 'afforestation' %}selected{% endif %}>Afforestation (new forest)</option>
+                    <option value="reafforestation" {% if posted.forest_category == 'reafforestation' %}selected{% endif %}>Reafforestation (restored forest)</option>
+                    <option value="existing" {% if posted.forest_category == 'existing' %}selected{% endif %}>Existing / old forest</option>
+                </select>
+                <p class="help">Planted trees count as carbon removal. Existing forest is shown as stored carbon.</p>
+            </div>
+            <div class="field">
+                <label for="tree-status">Tree status *</label>
+                <select id="tree-status" name="tree_status" required>
+                    <option value="">Select status</option>
+                    <option value="alive" {% if posted.tree_status == 'alive' %}selected{% endif %}>Alive</option>
+                    <option value="dead" {% if posted.tree_status == 'dead' %}selected{% endif %}>Dead</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="planting-date">Planting date</label>
+                <input type="date" id="planting-date" name="planting_date" max="{{ today|date:'Y-m-d' }}" value="{{ posted.planting_date }}">
+                <p class="help">If you do not know it, today's date is used for planted trees.</p>
+            </div>
+            <div class="field">
+                <label for="initial-dbh">Trunk diameter at 1.3 m (cm)</label>
+                <input type="number" id="initial-dbh" name="initial_dbh" step="0.1" min="0.1" placeholder="optional" value="{{ posted.initial_dbh }}">
+                <p class="help">A measurement makes the carbon estimate much more reliable.</p>
+            </div>
+            <div class="field">
+                <label for="initial-height">Height (m)</label>
+                <input type="number" id="initial-height" name="initial_height" step="0.1" min="0.1" placeholder="optional" value="{{ posted.initial_height }}">
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>3. Set the exact location</h2>
+        <div class="method-tabs" role="tablist" aria-label="Ways to set the location">
+            <button type="button" class="method-tab active" role="tab" aria-selected="true" data-method="search">Search a place</button>
+            <button type="button" class="method-tab" role="tab" aria-selected="false" data-method="gps">Use GPS</button>
+            <button type="button" class="method-tab" role="tab" aria-selected="false" data-method="manual">Enter coordinates</button>
+            <button type="button" class="method-tab" role="tab" aria-selected="false" data-method="map">Click on the map</button>
+        </div>
+
+        <div id="method-search" class="method-panel active">
+            <div class="search-row">
+                <input type="search" id="location-search" placeholder="Search for a place in Kenya" autocomplete="off" aria-label="Search for a place">
+                <button type="button" id="search-btn" class="btn btn-primary">Search</button>
+            </div>
+            <div id="search-results" class="search-results"></div>
+            <div class="chips">
+                <strong>Quick search:</strong>
+                <button type="button" class="chip" data-place="Nairobi National Park">Nairobi National Park</button>
+                <button type="button" class="chip" data-place="Kakamega Forest">Kakamega Forest</button>
+                <button type="button" class="chip" data-place="Aberdare Forest">Aberdare Forest</button>
+                <button type="button" class="chip" data-place="Mount Kenya">Mount Kenya</button>
+            </div>
+        </div>
+
+        <div id="method-gps" class="method-panel">
+            <button type="button" id="current-location-btn" class="btn btn-primary">Get my current location</button>
+            <p class="help" style="margin-top:0.75rem">Stand next to the tree, outdoors with a clear view of the sky, and hold the device steady.</p>
+            <p><span id="gps-quality-text">GPS ready</span> &middot; <span id="accuracy-value">Accuracy: not measured</span></p>
+        </div>
+
+        <div id="method-manual" class="method-panel">
+            <div class="form-grid">
+                <div class="field">
+                    <label for="manual-latitude">Latitude</label>
+                    <input type="text" id="manual-latitude" inputmode="decimal" placeholder="e.g. -1.286389">
+                </div>
+                <div class="field">
+                    <label for="manual-longitude">Longitude</label>
+                    <input type="text" id="manual-longitude" inputmode="decimal" placeholder="e.g. 36.817223">
+                </div>
+            </div>
+            <div class="actions">
+                <button type="button" id="apply-coords-btn" class="btn btn-primary">Apply to map</button>
+                <button type="button" id="paste-coords-btn" class="btn btn-secondary">Paste from clipboard</button>
+                <button type="button" id="clear-coords-btn" class="btn btn-secondary">Clear</button>
+            </div>
+            <p class="help">Use decimal degrees, as given by most GPS devices and phones.</p>
+        </div>
+
+        <div id="method-map" class="method-panel">
+            <p>Click the exact spot of the tree on the map below. Drag the marker to fine-tune it.</p>
+        </div>
+
+        <h3 style="margin-top:1rem">Final coordinates</h3>
+        <div class="validation-box" id="coordinate-validation-status">
+            <div><span class="validation-icon" aria-hidden="true">⚠️</span> <span class="validation-text">Coordinates not yet validated</span></div>
+            <button type="button" id="validate-coords-btn" class="btn btn-primary btn-sm">Validate location</button>
+        </div>
+        <div class="form-grid">
+            <div class="field">
+                <label for="latitude">Latitude *</label>
+                <input type="text" id="latitude" name="latitude" readonly required value="{{ posted.latitude }}">
+            </div>
+            <div class="field">
+                <label for="longitude">Longitude *</label>
+                <input type="text" id="longitude" name="longitude" readonly required value="{{ posted.longitude }}">
+            </div>
+        </div>
+        <p><strong>Place:</strong> <span id="address-text">No location selected</span><br><small id="place-details"></small></p>
+        <div class="actions">
+            <button type="button" id="copy-coords-btn" class="btn btn-secondary btn-sm">Copy coordinates</button>
+            <button type="button" id="clear-location-btn" class="btn btn-secondary btn-sm">Clear location</button>
+        </div>
+
+        <div class="map-tools" style="margin-top:1rem">
+            <button type="button" id="zoom-in-btn" class="btn btn-secondary btn-sm" aria-label="Zoom in">+</button>
+            <button type="button" id="zoom-out-btn" class="btn btn-secondary btn-sm" aria-label="Zoom out">−</button>
+            <button type="button" id="reset-view-btn" class="btn btn-secondary btn-sm">Reset view</button>
+            <label style="display:inline-flex;align-items:center;gap:0.4rem;margin:0 0 0 0.6rem;font-weight:500">
+                <input type="checkbox" id="toggle-satellite" style="width:auto"> Satellite view
+            </label>
+            <span class="muted" style="margin-left:auto">Selected: <span id="current-coords">0.000000, 0.000000</span> &middot; Cursor: <span id="cursor-coords">–</span></span>
+        </div>
+        <div id="map-wrap">
+            <div id="map" aria-label="Map for choosing the tree location"></div>
+            <div id="map-loader" class="map-loader"><div class="spinner"></div><p>Loading…</p></div>
+        </div>
+        <p class="help">Marker at: <span id="map-lat">0.000000</span>, <span id="map-lng">0.000000</span></p>
+    </div>
+
+    <div class="card">
+        <h2>4. Who gets the credit?</h2>
+        <div class="form-grid">
+            <div class="field">
+                <label for="contributor-type">Contributor type *</label>
+                <select id="contributor-type" name="contributor_type" required>
+                    <option value="">Select type</option>
+                    <option value="individual" {% if posted.contributor_type == 'individual' %}selected{% endif %}>Individual</option>
+                    <option value="institution" {% if posted.contributor_type == 'institution' %}selected{% endif %}>Institution / school</option>
+                    <option value="organization" {% if posted.contributor_type == 'organization' %}selected{% endif %}>Organization</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="contributor-name">Contributor name *</label>
+                <input type="text" id="contributor-name" name="contributor_name" maxlength="200" required
+                       placeholder="Full name or institution" value="{% firstof posted.contributor_name default_contributor %}">
+                <p class="help">The tree is credited to this name, so you can register trees for someone else.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>5. Check and submit</h2>
+        <ul class="checklist" aria-live="polite">
+            <li id="check-coords">❌ Coordinates validated (unique location)</li>
+            <li id="check-species">❌ Tree species selected</li>
+            <li id="check-location">❌ Location information complete</li>
+            <li id="check-contributor">❌ Contributor information complete</li>
+        </ul>
+        <div class="note note-info">
+            Trees are permanently recorded. Only living trees count towards carbon and oxygen figures. Duplicate locations are rejected.
+        </div>
+        <button type="submit" id="register-btn" class="btn btn-primary" disabled>Register tree</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="{% static 'momanyi/js/registration.js' %}"></script>
+{% endblock %}

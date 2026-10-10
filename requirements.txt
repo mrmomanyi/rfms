@@ -1,0 +1,8 @@
+Django>=5.0,<5.3
+
+# Optional, only when you switch from SQLite to PostgreSQL (see README):
+psycopg[binary]>=3.1
+
+# Optional, for production serving of static files:
+# whitenoise>=6.6
+# gunicorn>=22.0

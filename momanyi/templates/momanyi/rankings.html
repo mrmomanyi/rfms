@@ -1,0 +1,56 @@
+{% extends 'momanyi/base.html' %}
+{% load rfms_extras %}
+{% block title %}Rankings | RFMS{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Rankings</h1>
+        <p>Ranked by the CO₂e stored in the trees each contributor planted, then by number of trees.
+        {% if rank_verified_only %}Only verified trees count.{% else %}Unverified trees count too, and the verified share is shown.{% endif %}</p>
+    </div>
+</div>
+
+<div class="tabs" role="navigation" aria-label="Contributor type">
+    <a href="?type=all" {% if kind == 'all' %}class="active"{% endif %}>Everyone</a>
+    <a href="?type=individual" {% if kind == 'individual' %}class="active"{% endif %}>Individuals</a>
+    <a href="?type=institution" {% if kind == 'institution' %}class="active"{% endif %}>Schools &amp; institutions</a>
+    <a href="?type=organization" {% if kind == 'organization' %}class="active"{% endif %}>Organizations</a>
+</div>
+
+<div class="grid grid-main">
+    <div class="card">
+        <div class="card-head"><h2>Contributors</h2></div>
+        {% for p in people %}
+        <div class="rank-row">
+            <span class="rank-badge rank-{{ p.rank }}">{{ p.rank }}</span>
+            <div>
+                <div class="rank-name">{{ p.name }} <span class="badge badge-muted">{{ p.type|title }}</span></div>
+                <div class="rank-meta">{{ p.trees }} tree{{ p.trees|pluralize }} &middot; {{ p.planted_trees }} planted &middot; {{ p.verified_trees }} verified &middot; {{ p.county_count }} count{{ p.county_count|pluralize:'y,ies' }}</div>
+                <div class="bar" style="margin-top:0.35rem"><span style="width: {{ p.removal_co2e_kg|percent_of:max_removal }}%"></span></div>
+            </div>
+            <div class="rank-value">{{ p.removal_co2e_kg|tonnes:2 }} t<div class="rank-meta">CO₂e planted</div></div>
+        </div>
+        {% empty %}
+        <p class="empty">No contributors in this group yet.</p>
+        {% endfor %}
+    </div>
+
+    <div class="card">
+        <div class="card-head"><h2>Counties</h2></div>
+        {% for c in counties %}
+        <div class="rank-row">
+            <span class="rank-badge">{{ forloop.counter }}</span>
+            <div>
+                <div class="rank-name">{{ c.name }}</div>
+                <div class="rank-meta">{{ c.trees }} tree{{ c.trees|pluralize }}</div>
+                <div class="bar" style="margin-top:0.35rem"><span style="width: {{ c.removal_co2e_kg|percent_of:max_county }}%"></span></div>
+            </div>
+            <div class="rank-value">{{ c.removal_co2e_kg|tonnes:2 }} t</div>
+        </div>
+        {% empty %}
+        <p class="empty">No county data yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

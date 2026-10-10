@@ -1,0 +1,63 @@
+{% extends 'momanyi/base.html' %}
+{% load rfms_extras %}
+{% block title %}RFMS | Forest Resource Monitoring System{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>Every tree counted. Every number explained.</h1>
+    <p>Register the trees you plant or protect, measure them over time, and see the carbon and oxygen they provide, with the method open for anyone to read.</p>
+    <div class="actions">
+        {% if user.is_authenticated %}
+        <a class="btn btn-light" href="{% url 'tree_registration' %}">Register a tree</a>
+        {% else %}
+        <a class="btn btn-light" href="{% url 'signup' %}">Create an account</a>
+        <a class="btn btn-secondary" href="{% url 'login' %}">Log in</a>
+        {% endif %}
+    </div>
+</section>
+
+<div class="grid grid-4">
+    <div class="kpi">
+        <div class="kpi-label">Living trees counted</div>
+        <div class="kpi-value">{{ summary.trees_counted|num }}</div>
+        <div class="kpi-note">Across {{ county_count }} count{{ county_count|pluralize:'y,ies' }}</div>
+    </div>
+    <div class="kpi teal">
+        <div class="kpi-label">CO₂e stored</div>
+        <div class="kpi-value">{{ summary.stock_co2e_kg|tonnes }} <small>tonnes</small></div>
+        <div class="kpi-note">{{ summary.removal_co2e_kg|tonnes }} t from planted trees</div>
+    </div>
+    <div class="kpi blue">
+        <div class="kpi-label">Oxygen released</div>
+        <div class="kpi-value">{{ summary.oxygen_kg|tonnes }} <small>tonnes</small></div>
+        <div class="kpi-note">While building that biomass</div>
+    </div>
+    <div class="kpi amber">
+        <div class="kpi-label">Contributors</div>
+        <div class="kpi-value">{{ contributor_count|num }}</div>
+        <div class="kpi-note">{{ summary.verified_share }}% of trees verified</div>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <div class="card-head"><h2>Leading contributors</h2><a href="{% url 'rankings' %}">Full rankings</a></div>
+        {% for p in top_contributors %}
+        <div class="rank-row">
+            <span class="rank-badge rank-{{ p.rank }}">{{ p.rank }}</span>
+            <div><div class="rank-name">{{ p.name }}</div><div class="rank-meta">{{ p.trees }} tree{{ p.trees|pluralize }}</div></div>
+            <div class="rank-value">{{ p.removal_co2e_kg|tonnes:2 }} t</div>
+        </div>
+        {% empty %}
+        <p class="empty">No trees yet. Be the first to register one.</p>
+        {% endfor %}
+    </div>
+    <div class="card">
+        <h2>How honest is the data?</h2>
+        <p>{{ summary.measured_share }}% of counted trees have a field measurement. The rest are estimated from age, and shown as such.</p>
+        <div class="bar" aria-hidden="true"><span style="width: {{ summary.measured_share }}%"></span></div>
+        <p class="muted" style="margin-top:0.75rem">Average confidence: {{ summary.avg_confidence }} out of 100.</p>
+        <a href="{% url 'methodology' %}">Read the methodology</a>
+    </div>
+</div>
+{% endblock %}

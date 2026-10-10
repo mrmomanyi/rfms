@@ -1,0 +1,9 @@
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="pager" aria-label="Pages">
+    <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} &middot; {{ filtered_count }} tree{{ filtered_count|pluralize }}</span>
+    <span class="actions">
+        {% if page_obj.has_previous %}<a class="btn btn-secondary btn-sm" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+        {% if page_obj.has_next %}<a class="btn btn-secondary btn-sm" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+    </span>
+</nav>
+{% endif %}

@@ -1,0 +1,68 @@
+{% extends 'momanyi/base.html' %}
+{% load rfms_extras %}
+{% block title %}Dashboard | RFMS{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div><h1>Dashboard</h1><p>Registrations, survival and review progress across all counties.</p></div>
+    <div class="actions"><a class="btn btn-primary" href="{% url 'tree_registration' %}">Register a tree</a></div>
+</div>
+
+<div class="grid grid-4">
+    <div class="kpi"><div class="kpi-label">Total trees</div><div class="kpi-value">{{ total_trees|num }}</div><div class="kpi-note">All records</div></div>
+    <div class="kpi teal"><div class="kpi-label">Alive</div><div class="kpi-value">{{ alive_trees|num }}</div><div class="kpi-note">Survival rate {{ survival_rate }}%</div></div>
+    <div class="kpi amber"><div class="kpi-label">Dead</div><div class="kpi-value">{{ dead_trees|num }}</div><div class="kpi-note">Not counted in scores</div></div>
+    <div class="kpi blue"><div class="kpi-label">Last 7 days</div><div class="kpi-value">{{ recent_trees|num }}</div><div class="kpi-note">{{ verified_count }} verified, {{ pending_count }} pending</div></div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <div class="card-head"><h2>Trees by county</h2></div>
+        <div class="table-wrap"><table class="data">
+            <thead><tr><th>County</th><th class="num">Total</th><th class="num">Alive</th><th class="num">Dead</th></tr></thead>
+            <tbody>
+            {% for stat in county_stats %}
+                <tr><td>{{ stat.county__name|default:"Unknown" }}</td><td class="num">{{ stat.total }}</td><td class="num">{{ stat.alive }}</td><td class="num">{{ stat.dead }}</td></tr>
+            {% empty %}
+                <tr><td colspan="4" class="empty">No trees registered yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+    </div>
+    <div class="card">
+        <div class="card-head"><h2>Top species</h2></div>
+        <div class="table-wrap"><table class="data">
+            <thead><tr><th>Species</th><th class="num">Trees</th></tr></thead>
+            <tbody>
+            {% for stat in species_stats %}
+                <tr><td>{{ stat.species__name|default:"Unknown" }}</td><td class="num">{{ stat.total }}</td></tr>
+            {% empty %}
+                <tr><td colspan="2" class="empty">No species data yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-head"><h2>Recent registrations</h2><a href="{% url 'forest_map' %}">View on the map</a></div>
+    <div class="table-wrap"><table class="data">
+        <thead><tr><th>Tree</th><th>Species</th><th>County</th><th>Sub-county</th><th>Status</th><th>Review</th><th>Registered</th></tr></thead>
+        <tbody>
+        {% for tree in latest_trees %}
+            <tr>
+                <td><a href="{% url 'tree_detail' tree.tree_id %}"><strong>{{ tree.tree_id }}</strong></a></td>
+                <td>{{ tree.species.name }}</td>
+                <td>{{ tree.county.name }}</td>
+                <td>{{ tree.subcounty.name }}</td>
+                <td><span class="badge {% if tree.tree_status == 'alive' %}badge-ok{% else %}badge-warn{% endif %}">{{ tree.get_tree_status_display }}</span></td>
+                <td><span class="badge {{ tree.verification_status|verification_class }}">{{ tree.get_verification_status_display }}</span></td>
+                <td>{{ tree.registration_date|date:"d M Y, H:i" }}</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="7" class="empty">No trees registered yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</div>
+{% endblock %}

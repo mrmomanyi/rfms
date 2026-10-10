@@ -1,0 +1,114 @@
+{% extends 'momanyi/base.html' %}
+{% load rfms_extras static %}
+{% block title %}Carbon score | RFMS{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Carbon score</h1>
+        <p>Carbon dioxide equivalent (CO₂e) stored in living trees, updated {{ today|date:"d M Y" }}. <a href="{% url 'methodology' %}">How it is calculated</a></p>
+    </div>
+    <div class="actions"><button class="btn btn-secondary" type="button" onclick="window.print()">Print</button></div>
+</div>
+
+{% if summary.default_density_trees %}
+<div class="note">{{ summary.default_density_trees }} counted tree{{ summary.default_density_trees|pluralize }} use the default wood density. Add species values in the admin site to sharpen the figures.</div>
+{% endif %}
+
+<div class="grid grid-4">
+    <div class="kpi"><div class="kpi-label">CO₂e stored (all trees)</div><div class="kpi-value">{{ summary.stock_co2e_kg|tonnes }} <small>t</small></div><div class="kpi-note">{{ summary.trees_counted|num }} living trees counted</div></div>
+    <div class="kpi teal"><div class="kpi-label">From planted trees</div><div class="kpi-value">{{ summary.removal_co2e_kg|tonnes }} <small>t</small></div><div class="kpi-note">Counts as removal. Existing forest adds {{ summary.existing_co2e_kg|tonnes }} t of stock.</div></div>
+    <div class="kpi blue"><div class="kpi-label">Added each year</div><div class="kpi-value">{{ summary.annual_removal_co2e_kg|tonnes }} <small>t</small></div><div class="kpi-note">Modelled, planted trees only</div></div>
+    <div class="kpi amber"><div class="kpi-label">Average per tree</div><div class="kpi-value">{{ summary.avg_co2e_per_tree_kg|num }} <small>kg</small></div><div class="kpi-note">{{ summary.needs_measurement }} tree{{ summary.needs_measurement|pluralize }} need a measurement</div></div>
+</div>
+
+<div class="grid grid-main">
+    <div class="card">
+        <div class="card-head"><h2>Five-year forecast, planted trees</h2></div>
+        <div class="chart-box"><canvas id="chart-forecast" role="img" aria-label="Forecast of CO2e stored by planted trees over five years"></canvas></div>
+        <p class="muted" style="margin-top:0.75rem">Projection scaled to today's estimate. It assumes trees survive.</p>
+    </div>
+    <div class="card">
+        <div class="card-head"><h2>Planted vs existing</h2></div>
+        <div class="chart-box"><canvas id="chart-split" role="img" aria-label="Split of stored carbon between planted and existing forest"></canvas></div>
+    </div>
+</div>
+
+<div class="grid grid-main">
+    <div class="card">
+        <div class="card-head"><h2>Species</h2></div>
+        <div class="chart-box"><canvas id="chart-species" role="img" aria-label="CO2e stored by species"></canvas></div>
+        <div class="table-wrap" style="margin-top:1rem"><table class="data">
+            <thead><tr><th>Species</th><th class="num">Trees</th><th class="num">Tonnes CO₂e</th><th class="num">Average per tree (kg)</th></tr></thead>
+            <tbody>
+            {% for s in by_species %}
+                <tr><td>{{ s.name }}</td><td class="num">{{ s.trees }}</td><td class="num">{{ s.co2e_kg|tonnes:2 }}</td><td class="num">{{ s.avg_co2e_kg|num }}</td></tr>
+            {% empty %}
+                <tr><td colspan="4" class="empty">No data yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+    </div>
+    <div>
+        <div class="card">
+            <div class="card-head"><h2>Data quality</h2></div>
+            <p class="rank-meta">Trees with a field measurement</p>
+            <div class="bar"><span style="width: {{ summary.measured_share }}%"></span></div>
+            <p class="help">{{ summary.measured_share }}% ({{ summary.measured_trees }} of {{ summary.trees_counted }})</p>
+            <p class="rank-meta">Trees verified by a reviewer</p>
+            <div class="bar"><span style="width: {{ summary.verified_share }}%"></span></div>
+            <p class="help">{{ summary.verified_share }}% ({{ summary.verified_trees }} of {{ summary.trees_counted }})</p>
+            <p class="rank-meta">Average confidence</p>
+            <div class="bar"><span style="width: {{ summary.avg_confidence }}%"></span></div>
+            <p class="help">{{ summary.avg_confidence }} out of 100</p>
+        </div>
+        <div class="card">
+            <div class="card-head"><h2>Top contributors</h2><a href="{% url 'rankings' %}">All</a></div>
+            {% for p in top_contributors|slice:":5" %}
+            <div class="rank-row">
+                <span class="rank-badge rank-{{ p.rank }}">{{ p.rank }}</span>
+                <div><div class="rank-name">{{ p.name }}</div><div class="rank-meta">{{ p.trees }} tree{{ p.trees|pluralize }}</div></div>
+                <div class="rank-value">{{ p.removal_co2e_kg|tonnes:2 }} t</div>
+            </div>
+            {% empty %}
+            <p class="empty">No contributors yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-head"><h2>Every tree</h2></div>
+    {% include 'momanyi/_filters.html' %}
+    <div class="table-wrap"><table class="data">
+        <thead><tr><th>Tree</th><th>Species</th><th>Contributor</th><th class="num">Age (yrs)</th><th>Method</th><th class="num">Diameter (cm)</th><th class="num">CO₂e (kg)</th><th class="num">Per year (kg)</th><th class="num">In 5 years (kg)</th><th>Confidence</th><th>Review</th></tr></thead>
+        <tbody>
+        {% for r in page_obj %}
+            <tr>
+                <td><a href="{% url 'tree_detail' r.tree_id %}"><strong>{{ r.tree_id }}</strong></a></td>
+                <td>{{ r.species }}</td>
+                <td>{{ r.contributor }}</td>
+                <td class="num">{{ r.age_years|default_if_none:"–" }}</td>
+                <td>{% if r.needs_measurement %}<span class="badge badge-warn">Needs measurement</span>{% else %}<span class="badge {% if r.method == 'measured' %}badge-ok{% else %}badge-muted{% endif %}">{{ r.method|title }}</span>{% endif %}</td>
+                <td class="num">{{ r.dbh_cm|num:1 }}</td>
+                <td class="num">{{ r.co2e_kg|num }}</td>
+                <td class="num">{{ r.annual_co2e_kg|num }}</td>
+                <td class="num">{% if r.forecast %}{{ r.forecast.5|num }}{% else %}–{% endif %}</td>
+                <td>{% if r.confidence is not None %}<span class="badge {{ r.confidence|confidence_class }}">{{ r.confidence }}</span>{% else %}–{% endif %}</td>
+                <td><span class="badge {{ r.verification|verification_class }}">{{ r.verification|title }}</span></td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="11" class="empty">No trees match.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+    {% include 'momanyi/_pager.html' %}
+</div>
+
+{{ chart_data|json_script:"chart-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{% static 'momanyi/js/charts.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends 'momanyi/base.html' %}
+{% block title %}Methodology | RFMS{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Methodology</h1>
+<p>How tree records become carbon and oxygen figures, and where the limits are.</p></div></div>
+
+{% if species_missing_density %}
+<div class="note">{{ species_missing_density }} of {{ species_total }} species still use the default wood density of {{ default_density }} g/cm³ instead of a species value. Figures for those species are less precise.</div>
+{% endif %}
+
+<div class="card">
+    <h2>1. What counts as carbon removal</h2>
+    <p>Trees registered as <strong>afforestation</strong> or <strong>reafforestation</strong> are planted trees, and the carbon they store counts as removal. Trees registered as <strong>existing forest</strong> are shown as carbon <em>stored</em>, but not as removal, because planting did not create them. Dead and rejected trees are not counted.</p>
+</div>
+
+<div class="card">
+    <h2>2. Tree size</h2>
+    <p>When a tree has a field measurement, the latest trunk diameter (and height, if given) is used. This is labelled <strong>measured</strong>. If only diameter is known, height is estimated from it.</p>
+    <p>Without a measurement, size is estimated from the tree's age with a growth curve. This is labelled <strong>modelled</strong> and has low confidence. Age comes from the planting date, or the registration date when no planting date is given. An existing tree with no known age and no measurement is not estimated at all, and is listed as needing a measurement.</p>
+    <p class="muted">Generic curve in use unless a species has its own: maximum diameter {{ defaults.dbh_max_cm }} cm, maximum height {{ defaults.height_max_m }} m. These generic values are illustrative and are being replaced by species values.</p>
+</div>
+
+<div class="card">
+    <h2>3. Biomass and carbon</h2>
+    <p>Above-ground biomass uses the pantropical equation of Chave and colleagues (2014):</p>
+    <p><code>biomass (kg) = 0.0673 × (wood density × diameter² × height) ^ 0.976</code></p>
+    <p>Diameter is in cm, height in metres and wood density in g/cm³. Roots are added with a below-ground to above-ground ratio of {{ root_shoot }}. Carbon is {{ carbon_fraction }} of dry biomass, and CO₂ equivalent is carbon × {{ co2_per_carbon|floatformat:3 }} (the ratio of the molecular weights of CO₂ and C).</p>
+    <p class="muted">The default wood density ({{ default_density }} g/cm³) and the root ratio are placeholders until species and forest-type values are confirmed.</p>
+</div>
+
+<div class="card">
+    <h2>4. Oxygen</h2>
+    <p>Photosynthesis releases about {{ o2_per_co2|floatformat:2 }} kg of oxygen for every kg of CO₂ fixed. The oxygen figure is that amount for the carbon in the tree. Over a whole ecosystem, decay and respiration use most of that oxygen again, so it should be read as oxygen released while the biomass was built, not as oxygen supplied to people.</p>
+</div>
+
+<div class="card">
+    <h2>5. Confidence score</h2>
+    <p>A transparent rule, not a statistical error estimate: modelled only 35; measured diameter 70; measured diameter and height 85; minus 15 if the measurement is older than 24 months; plus 10 if a reviewer has verified the tree (maximum 95).</p>
+</div>
+
+<div class="card">
+    <h2>6. Forecasts</h2>
+    <p>The five-year forecast follows the growth curve, scaled so that year zero matches the tree's current estimate. It assumes the tree survives and is a projection, not a measurement.</p>
+</div>
+
+<div class="card">
+    <h2>7. Rankings</h2>
+    <p>Contributors are ranked by the CO₂e stored in the trees they <em>planted</em>, then by tree count. {% if rank_verified_only %}Only verified trees are counted in rankings.{% else %}All living trees that are not rejected are counted, and the share that is verified is shown.{% endif %} Names are matched without regard to capital letters, so different spellings count as different people.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'momanyi/base.html' %}
+{% load rfms_extras static %}
+{% block title %}Oxygen index | RFMS{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Oxygen index</h1>
+        <p>Oxygen released while the biomass of living trees was built, updated {{ today|date:"d M Y" }}. <a href="{% url 'methodology' %}">How it is calculated</a></p>
+    </div>
+    <div class="actions"><button class="btn btn-secondary" type="button" onclick="window.print()">Print</button></div>
+</div>
+
+<div class="note note-info">The oxygen figure follows from the carbon in each tree (about 0.73 kg of O₂ per kg of CO₂ fixed). Decay and respiration use most of it again, so treat it as a measure of tree growth, not as oxygen supplied to people.</div>
+
+<div class="grid grid-4">
+    <div class="kpi"><div class="kpi-label">Living trees</div><div class="kpi-value">{{ summary.trees_counted|num }}</div><div class="kpi-note">Counted in this index</div></div>
+    <div class="kpi blue"><div class="kpi-label">Oxygen released</div><div class="kpi-value">{{ summary.oxygen_kg|tonnes }} <small>t</small></div><div class="kpi-note">All trees</div></div>
+    <div class="kpi teal"><div class="kpi-label">From planted trees</div><div class="kpi-value">{{ summary.oxygen_removal_kg|tonnes }} <small>t</small></div><div class="kpi-note">Excludes existing forest</div></div>
+    <div class="kpi amber"><div class="kpi-label">Average per tree</div><div class="kpi-value">{% widthratio summary.oxygen_kg summary.trees_counted 1 as avg_oxygen %}{{ avg_oxygen|default:"0" }} <small>kg</small></div><div class="kpi-note">O₂ per counted tree</div></div>
+</div>
+
+<div class="grid grid-main">
+    <div class="card">
+        <div class="card-head"><h2>By species</h2></div>
+        <div class="chart-box"><canvas id="chart-oxygen-species" role="img" aria-label="Oxygen released by species"></canvas></div>
+        <div class="table-wrap" style="margin-top:1rem"><table class="data">
+            <thead><tr><th>Species</th><th class="num">Trees</th><th class="num">Tonnes O₂</th></tr></thead>
+            <tbody>
+            {% for s in by_species %}
+                <tr><td>{{ s.name }}</td><td class="num">{{ s.trees }}</td><td class="num">{{ s.oxygen_kg|tonnes:2 }}</td></tr>
+            {% empty %}
+                <tr><td colspan="3" class="empty">No data yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+    </div>
+    <div class="card">
+        <div class="card-head"><h2>Top contributors</h2><a href="{% url 'rankings' %}">Rankings</a></div>
+        {% for p in top_contributors %}
+        <div class="rank-row">
+            <span class="rank-badge">{{ forloop.counter }}</span>
+            <div><div class="rank-name">{{ p.name }}</div><div class="rank-meta">{{ p.trees }} tree{{ p.trees|pluralize }}</div></div>
+            <div class="rank-value">{{ p.oxygen_kg|num }} kg</div>
+        </div>
+        {% empty %}
+        <p class="empty">No contributors yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-head"><h2>Every tree</h2></div>
+    {% include 'momanyi/_filters.html' %}
+    <div class="table-wrap"><table class="data">
+        <thead><tr><th>Tree</th><th>Species</th><th>Contributor</th><th>County</th><th>Method</th><th class="num">Oxygen (kg O₂)</th><th>Review</th></tr></thead>
+        <tbody>
+        {% for r in page_obj %}
+            <tr>
+                <td><a href="{% url 'tree_detail' r.tree_id %}"><strong>{{ r.tree_id }}</strong></a></td>
+                <td>{{ r.species }}</td>
+                <td>{{ r.contributor }}</td>
+                <td>{{ r.county }}</td>
+                <td>{% if r.needs_measurement %}<span class="badge badge-warn">Needs measurement</span>{% else %}<span class="badge {% if r.method == 'measured' %}badge-ok{% else %}badge-muted{% endif %}">{{ r.method|title }}</span>{% endif %}</td>
+                <td class="num">{{ r.oxygen_kg|num }}</td>
+                <td><span class="badge {{ r.verification|verification_class }}">{{ r.verification|title }}</span></td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="7" class="empty">No trees match.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+    {% include 'momanyi/_pager.html' %}
+</div>
+
+{{ chart_data|json_script:"chart-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{% static 'momanyi/js/charts.js' %}"></script>
+{% endblock %}

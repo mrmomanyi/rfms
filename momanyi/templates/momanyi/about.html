@@ -1,0 +1,18 @@
+{% extends 'momanyi/base.html' %}
+{% block title %}About | RFMS{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>About RFMS</h1>
+<p>A robust forest monitoring system for recording trees, measuring their growth, and turning those records into carbon and oxygen estimates.</p></div></div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2>What it does</h2>
+        <p>Contributors register each tree with its species, exact location and planting details. Measurements are added over time. Reviewers verify records. The dashboards then show what the trees store and release.</p>
+    </div>
+    <div class="card">
+        <h2>What we promise</h2>
+        <p>Every figure comes from a method you can read. Estimates are labelled as estimates. Measured and verified trees are shown separately from modelled ones.</p>
+        <a class="btn btn-secondary" href="{% url 'methodology' %}">See the methodology</a>
+    </div>
+</div>
+{% endblock %}

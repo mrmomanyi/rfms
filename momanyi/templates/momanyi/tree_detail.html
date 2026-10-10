@@ -1,0 +1,97 @@
+{% extends 'momanyi/base.html' %}
+{% load rfms_extras %}
+{% block title %}{{ tree.tree_id }} | RFMS{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>{{ tree.tree_id }}</h1>
+        <p>{{ tree.species.name }}{% if tree.species.scientific_name %} <em>({{ tree.species.scientific_name }})</em>{% endif %} &middot; {{ tree.county.name }}, {{ tree.subcounty.name }}</p>
+    </div>
+    <div class="actions">
+        <span class="badge {% if tree.tree_status == 'alive' %}badge-ok{% else %}badge-warn{% endif %}">{{ tree.get_tree_status_display }}</span>
+        <span class="badge {{ tree.verification_status|verification_class }}">{{ tree.get_verification_status_display }}</span>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2>Record</h2>
+        <dl class="facts">
+            <dt>Category</dt><dd>{{ tree.get_forest_category_display }}</dd>
+            <dt>Plot</dt><dd>{{ tree.plot_name }}</dd>
+            <dt>Location</dt><dd>{{ tree.latitude|floatformat:6 }}, {{ tree.longitude|floatformat:6 }}</dd>
+            <dt>Planted</dt><dd>{% if tree.planting_date %}{{ tree.planting_date|date:"d M Y" }}{% else %}Not recorded{% endif %}</dd>
+            <dt>Registered</dt><dd>{{ tree.registration_date|date:"d M Y" }}</dd>
+            <dt>Credited to</dt><dd>{{ tree.contributor_name }} ({{ tree.get_contributor_type_display }})</dd>
+        </dl>
+    </div>
+
+    <div class="card">
+        <h2>Carbon and oxygen</h2>
+        {% if result.needs_measurement %}
+        <p class="note">This tree has no known age and no measurement, so it cannot be estimated yet. Add a measurement below.</p>
+        {% else %}
+        <dl class="facts">
+            <dt>CO₂e stored</dt><dd>{{ result.co2e_kg|num }} kg</dd>
+            <dt>Oxygen released</dt><dd>{{ result.oxygen_kg|num }} kg</dd>
+            <dt>Added per year</dt><dd>{{ result.annual_co2e_kg|num }} kg CO₂e (modelled)</dd>
+            <dt>In 5 years</dt><dd>{% if result.forecast %}{{ result.forecast.5|num }} kg CO₂e{% else %}–{% endif %}</dd>
+            <dt>Size used</dt><dd>{{ result.dbh_cm|num:1 }} cm across, {{ result.height_m|num:1 }} m high</dd>
+            <dt>Method</dt><dd><span class="badge {% if result.method == 'measured' %}badge-ok{% else %}badge-muted{% endif %}">{{ result.method|title }}</span></dd>
+            <dt>Confidence</dt><dd><span class="badge {{ result.confidence|confidence_class }}">{{ result.confidence }} / 100</span></dd>
+            <dt>Counts as</dt><dd>{% if result.counts_as_removal %}Carbon removal (planted){% else %}Stored carbon only (existing forest){% endif %}</dd>
+        </dl>
+        {% if result.uses_default_density %}<p class="help">This species uses the default wood density.</p>{% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <div class="card-head"><h2>Measurements</h2></div>
+        <div class="table-wrap"><table class="data">
+            <thead><tr><th>Date</th><th class="num">Diameter (cm)</th><th class="num">Height (m)</th><th>By</th></tr></thead>
+            <tbody>
+            {% for m in measurements %}
+                <tr>
+                    <td>{{ m.measured_on|date:"d M Y" }}</td><td class="num">{{ m.dbh_cm|num:1 }}</td>
+                    <td class="num">{{ m.height_m|num:1 }}</td>
+                    <td>{% if m.measured_by %}{{ m.measured_by.get_full_name|default:m.measured_by.username }}{% else %}–{% endif %}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="4" class="empty">No measurements yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+
+        {% if can_edit %}
+        <h3 style="margin-top:1.25rem">Add a measurement</h3>
+        <form method="post" action="{% url 'add_measurement' tree.tree_id %}">
+            {% csrf_token %}
+            <div class="form-grid">
+                {% for field in form %}
+                <div class="field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary">Save measurement</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-head"><h2>History</h2></div>
+        {% for e in events %}
+        <div class="rank-row" style="grid-template-columns: minmax(0,1fr) auto">
+            <div><div class="rank-name">{{ e.get_event_type_display }}</div><div class="rank-meta">{{ e.note }}{% if e.user %} &middot; {{ e.user.get_full_name|default:e.user.username }}{% endif %}</div></div>
+            <div class="rank-meta">{{ e.created_at|date:"d M Y" }}</div>
+        </div>
+        {% empty %}
+        <p class="empty">No history yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

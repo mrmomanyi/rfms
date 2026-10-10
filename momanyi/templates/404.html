@@ -1,0 +1,9 @@
+{% extends 'momanyi/base.html' %}
+{% block title %}Page not found | RFMS{% endblock %}
+{% block content %}
+<div class="card auth-card" style="text-align:center">
+    <h1>Page not found</h1>
+    <p>We could not find the page you asked for. It may have moved, or the address may have a typing mistake.</p>
+    <a class="btn btn-primary" href="{% url 'index' %}">Back to the home page</a>
+</div>
+{% endblock %}
